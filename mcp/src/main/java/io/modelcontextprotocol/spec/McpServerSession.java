@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.modelcontextprotocol.server.McpAsyncServerExchange;
+import io.modelcontextprotocol.server.auth.AuthContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
@@ -48,6 +49,8 @@ public class McpServerSession implements McpSession {
 
 	private final AtomicReference<McpSchema.Implementation> clientInfo = new AtomicReference<>();
 
+	private final AuthContext authContext;
+
 	private static final int STATE_UNINITIALIZED = 0;
 
 	private static final int STATE_INITIALIZING = 1;
@@ -68,10 +71,12 @@ public class McpServerSession implements McpSession {
 	 * received.
 	 * @param requestHandlers map of request handlers to use
 	 * @param notificationHandlers map of notification handlers to use
+	 * @param authContext the authentication context for this session
 	 */
 	public McpServerSession(String id, Duration requestTimeout, McpServerTransport transport,
 			InitRequestHandler initHandler, InitNotificationHandler initNotificationHandler,
-			Map<String, RequestHandler<?>> requestHandlers, Map<String, NotificationHandler> notificationHandlers) {
+			Map<String, RequestHandler<?>> requestHandlers, Map<String, NotificationHandler> notificationHandlers,
+			AuthContext authContext) {
 		this.id = id;
 		this.requestTimeout = requestTimeout;
 		this.transport = transport;
@@ -79,6 +84,7 @@ public class McpServerSession implements McpSession {
 		this.initNotificationHandler = initNotificationHandler;
 		this.requestHandlers = requestHandlers;
 		this.notificationHandlers = notificationHandlers;
+		this.authContext = authContext != null ? authContext : AuthContext.EMPTY;
 	}
 
 	/**
@@ -242,7 +248,8 @@ public class McpServerSession implements McpSession {
 		return Mono.defer(() -> {
 			if (McpSchema.METHOD_NOTIFICATION_INITIALIZED.equals(notification.method())) {
 				this.state.lazySet(STATE_INITIALIZED);
-				exchangeSink.tryEmitValue(new McpAsyncServerExchange(this, clientCapabilities.get(), clientInfo.get()));
+				exchangeSink.tryEmitValue(
+						new McpAsyncServerExchange(this, clientCapabilities.get(), clientInfo.get(), this.authContext));
 				return this.initNotificationHandler.handle();
 			}
 

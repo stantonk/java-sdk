@@ -5,6 +5,7 @@
 package io.modelcontextprotocol.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import io.modelcontextprotocol.server.auth.AuthContext;
 import io.modelcontextprotocol.spec.McpError;
 import io.modelcontextprotocol.spec.McpSchema;
 import io.modelcontextprotocol.spec.McpSchema.LoggingLevel;
@@ -28,6 +29,8 @@ public class McpAsyncServerExchange {
 
 	private final McpSchema.Implementation clientInfo;
 
+	private final AuthContext authContext;
+
 	private volatile LoggingLevel minLoggingLevel = LoggingLevel.INFO;
 
 	private static final TypeReference<McpSchema.CreateMessageResult> CREATE_MESSAGE_RESULT_TYPE_REF = new TypeReference<>() {
@@ -47,10 +50,11 @@ public class McpAsyncServerExchange {
 	 * @param clientInfo The client implementation information.
 	 */
 	public McpAsyncServerExchange(McpServerSession session, McpSchema.ClientCapabilities clientCapabilities,
-			McpSchema.Implementation clientInfo) {
+			McpSchema.Implementation clientInfo, AuthContext authContext) {
 		this.session = session;
 		this.clientCapabilities = clientCapabilities;
 		this.clientInfo = clientInfo;
+		this.authContext = authContext;
 	}
 
 	/**
@@ -157,6 +161,11 @@ public class McpAsyncServerExchange {
 			}
 			return Mono.empty();
 		});
+	}
+
+	public Mono<AuthContext> getAuthContext() {
+		// defer()? Could authContext change over time, e.g. token refreshes?
+		return Mono.just(authContext == null ? AuthContext.EMPTY : authContext);
 	}
 
 	/**
