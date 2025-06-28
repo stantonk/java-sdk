@@ -4,9 +4,8 @@
 
 package io.modelcontextprotocol.server;
 
-import io.modelcontextprotocol.server.auth.AuthContext;
+import io.modelcontextprotocol.server.auth.SecurityContext;
 import io.modelcontextprotocol.spec.McpSchema;
-import io.modelcontextprotocol.spec.McpSchema.LoggingLevel;
 import io.modelcontextprotocol.spec.McpSchema.LoggingMessageNotification;
 
 /**
@@ -109,8 +108,8 @@ public class McpSyncServerExchange {
 		this.exchange.loggingNotification(loggingMessageNotification).block();
 	}
 
-	public AuthContext getAuthContext() {
-		return this.exchange.getAuthContext().block();
+	public SecurityContext getSecurityContext() {
+		return this.exchange.getSecurityContext().block();
 	}
 
 }

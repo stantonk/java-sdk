@@ -17,7 +17,7 @@ import java.util.function.BiFunction;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.modelcontextprotocol.server.auth.AuthContext;
+import io.modelcontextprotocol.server.auth.SecurityContext;
 import io.modelcontextprotocol.spec.McpClientSession;
 import io.modelcontextprotocol.spec.McpError;
 import io.modelcontextprotocol.spec.McpSchema;
@@ -186,7 +186,7 @@ public class McpAsyncServer {
 
 		mcpTransportProvider.setSessionFactory(transport -> new McpServerSession(UUID.randomUUID().toString(),
 				requestTimeout, transport, this::asyncInitializeRequestHandler, Mono::empty, requestHandlers,
-				notificationHandlers, AuthContext.EMPTY));
+				notificationHandlers, SecurityContext.EMPTY));
 	}
 
 	// ---------------------------------------

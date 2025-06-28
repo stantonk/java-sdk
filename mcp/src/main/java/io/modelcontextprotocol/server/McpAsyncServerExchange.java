@@ -5,7 +5,7 @@
 package io.modelcontextprotocol.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import io.modelcontextprotocol.server.auth.AuthContext;
+import io.modelcontextprotocol.server.auth.SecurityContext;
 import io.modelcontextprotocol.spec.McpError;
 import io.modelcontextprotocol.spec.McpSchema;
 import io.modelcontextprotocol.spec.McpSchema.LoggingLevel;
@@ -29,7 +29,7 @@ public class McpAsyncServerExchange {
 
 	private final McpSchema.Implementation clientInfo;
 
-	private final AuthContext authContext;
+	private final SecurityContext securityContext;
 
 	private volatile LoggingLevel minLoggingLevel = LoggingLevel.INFO;
 
@@ -50,11 +50,11 @@ public class McpAsyncServerExchange {
 	 * @param clientInfo The client implementation information.
 	 */
 	public McpAsyncServerExchange(McpServerSession session, McpSchema.ClientCapabilities clientCapabilities,
-			McpSchema.Implementation clientInfo, AuthContext authContext) {
+			McpSchema.Implementation clientInfo, SecurityContext securityContext) {
 		this.session = session;
 		this.clientCapabilities = clientCapabilities;
 		this.clientInfo = clientInfo;
-		this.authContext = authContext;
+		this.securityContext = securityContext;
 	}
 
 	/**
@@ -163,9 +163,9 @@ public class McpAsyncServerExchange {
 		});
 	}
 
-	public Mono<AuthContext> getAuthContext() {
-		// defer()? Could authContext change over time, e.g. token refreshes?
-		return Mono.just(authContext == null ? AuthContext.EMPTY : authContext);
+	public Mono<SecurityContext> getSecurityContext() {
+		// defer()? Could securityContext change over time, e.g. token refreshes?
+		return Mono.just(securityContext == null ? SecurityContext.EMPTY : securityContext);
 	}
 
 	/**

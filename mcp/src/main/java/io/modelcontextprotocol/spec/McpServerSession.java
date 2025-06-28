@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.modelcontextprotocol.server.McpAsyncServerExchange;
-import io.modelcontextprotocol.server.auth.AuthContext;
+import io.modelcontextprotocol.server.auth.SecurityContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
@@ -49,7 +49,7 @@ public class McpServerSession implements McpSession {
 
 	private final AtomicReference<McpSchema.Implementation> clientInfo = new AtomicReference<>();
 
-	private final AuthContext authContext;
+	private SecurityContext securityContext;
 
 	private static final int STATE_UNINITIALIZED = 0;
 
@@ -71,12 +71,12 @@ public class McpServerSession implements McpSession {
 	 * received.
 	 * @param requestHandlers map of request handlers to use
 	 * @param notificationHandlers map of notification handlers to use
-	 * @param authContext the authentication context for this session
+	 * @param securityContext the authentication context for this session
 	 */
 	public McpServerSession(String id, Duration requestTimeout, McpServerTransport transport,
 			InitRequestHandler initHandler, InitNotificationHandler initNotificationHandler,
 			Map<String, RequestHandler<?>> requestHandlers, Map<String, NotificationHandler> notificationHandlers,
-			AuthContext authContext) {
+			SecurityContext securityContext) {
 		this.id = id;
 		this.requestTimeout = requestTimeout;
 		this.transport = transport;
@@ -84,7 +84,7 @@ public class McpServerSession implements McpSession {
 		this.initNotificationHandler = initNotificationHandler;
 		this.requestHandlers = requestHandlers;
 		this.notificationHandlers = notificationHandlers;
-		this.authContext = authContext != null ? authContext : AuthContext.EMPTY;
+		this.securityContext = securityContext != null ? securityContext : SecurityContext.EMPTY;
 	}
 
 	/**
@@ -248,8 +248,8 @@ public class McpServerSession implements McpSession {
 		return Mono.defer(() -> {
 			if (McpSchema.METHOD_NOTIFICATION_INITIALIZED.equals(notification.method())) {
 				this.state.lazySet(STATE_INITIALIZED);
-				exchangeSink.tryEmitValue(
-						new McpAsyncServerExchange(this, clientCapabilities.get(), clientInfo.get(), this.authContext));
+				exchangeSink.tryEmitValue(new McpAsyncServerExchange(this, clientCapabilities.get(), clientInfo.get(),
+						this.securityContext));
 				return this.initNotificationHandler.handle();
 			}
 
@@ -260,6 +260,10 @@ public class McpServerSession implements McpSession {
 			}
 			return this.exchangeSink.asMono().flatMap(exchange -> handler.handle(exchange, notification.params()));
 		});
+	}
+
+	public void setSecurityContext(SecurityContext securityContext) {
+		this.securityContext = securityContext != null ? securityContext : SecurityContext.EMPTY;
 	}
 
 	record MethodNotFoundError(String method, String message, Object data) {
@@ -328,6 +332,7 @@ public class McpServerSession implements McpSession {
 	 * @param <T> the type of the response that is expected as a result of handling the
 	 * request.
 	 */
+	@FunctionalInterface
 	public interface RequestHandler<T> {
 
 		/**
