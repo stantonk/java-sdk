@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.modelcontextprotocol.server.auth.SecurityContext;
 import io.modelcontextprotocol.spec.McpError;
 import io.modelcontextprotocol.spec.McpSchema;
 import io.modelcontextprotocol.spec.McpServerSession;
@@ -191,6 +192,14 @@ public class HttpServletSseServerTransportProvider extends HttpServlet implement
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 
+		SecurityContext securityContext = (SecurityContext) request.getAttribute("securityContext");
+		if (securityContext == null) {
+			// if null but auth is not required...
+			// TODO: and auth is required...
+			response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+			return;
+		}
+
 		String requestURI = request.getRequestURI();
 		if (!requestURI.endsWith(sseEndpoint)) {
 			response.sendError(HttpServletResponse.SC_NOT_FOUND);
@@ -220,6 +229,11 @@ public class HttpServletSseServerTransportProvider extends HttpServlet implement
 
 		// Create a new session using the session factory
 		McpServerSession session = sessionFactory.create(sessionTransport);
+
+		// set security context if available (otherwise it'll be SecurityContext.EMPTY)
+		if (securityContext != null) {
+			session.setSecurityContext(securityContext);
+		}
 		this.sessions.put(sessionId, session);
 
 		// Send initial endpoint event
@@ -243,6 +257,13 @@ public class HttpServletSseServerTransportProvider extends HttpServlet implement
 
 		if (isClosing.get()) {
 			response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE, "Server is shutting down");
+			return;
+		}
+
+		SecurityContext securityContext = (SecurityContext) request.getAttribute("securityContext");
+		if (securityContext == null) {
+			// TODO: and auth is required...
+			response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
 			return;
 		}
 
@@ -276,6 +297,12 @@ public class HttpServletSseServerTransportProvider extends HttpServlet implement
 			writer.write(jsonError);
 			writer.flush();
 			return;
+		}
+
+		// set security context if available (otherwise it'll be SecurityContext.EMPTY)
+		if (securityContext != null) {
+			// Update the session's security context
+			session.setSecurityContext(securityContext);
 		}
 
 		try {
